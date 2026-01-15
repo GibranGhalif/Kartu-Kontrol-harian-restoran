@@ -815,7 +815,8 @@
             enabled: false
         };
         let appUsers = JSON.parse(localStorage.getItem('pbjt_app_users')) || [
-            { id: 'default', name: 'Petugas Demo', username: 'petugas', password: 'pbjt123', role: 'Petugas' }
+            { id: 'admin-default', name: 'Admin Utama', username: 'admin', password: 'admin123', role: 'Admin' },
+            { id: 'petugas-default', name: 'Petugas Lapangan', username: 'petugas', password: 'pbjt123', role: 'Petugas' }
         ];
         let wajibPajakList = JSON.parse(localStorage.getItem('pbjt_wajib_pajak')) || [];
         let petugasList = JSON.parse(localStorage.getItem('pbjt_petugas_list')) || [];
@@ -823,7 +824,6 @@
         let deleteUserId = null;
         let deleteWpId = null;
         let currentUser = JSON.parse(localStorage.getItem('pbjt_current_user')) || null;
-        const loginUser = { username: 'petugas', password: 'pbjt123' };
 
         document.addEventListener('DOMContentLoaded', function() {
             initAuth();
@@ -872,15 +872,33 @@
             return localStorage.getItem('pbjt_logged_in') === 'true';
         }
 
+        function isAdmin() {
+            return currentUser && currentUser.role === 'Admin';
+        }
+
         function toggleAuthUI(loggedIn) {
             const loginScreen = document.getElementById('login-screen');
             const appContent = document.getElementById('app-content');
             if (loggedIn) {
                 loginScreen.classList.add('hidden');
                 appContent.classList.remove('hidden');
+                applyRoleAccess();
             } else {
                 loginScreen.classList.remove('hidden');
                 appContent.classList.add('hidden');
+            }
+        }
+
+        function applyRoleAccess() {
+            const tabPengaturan = document.getElementById('tab-pengaturan');
+            if (!tabPengaturan) return;
+            if (isAdmin()) {
+                tabPengaturan.classList.remove('hidden');
+            } else {
+                tabPengaturan.classList.add('hidden');
+                if (document.getElementById('content-pengaturan') && !document.getElementById('content-pengaturan').classList.contains('hidden')) {
+                    showTab('dashboard');
+                }
             }
         }
 
@@ -923,6 +941,10 @@
         }
 
         function showTab(tabName) {
+            if (tabName === 'pengaturan' && !isAdmin()) {
+                showToast('Menu pengaturan hanya untuk admin');
+                return;
+            }
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => {
                 el.classList.remove('tab-active');
@@ -1685,7 +1707,8 @@
             if (!confirm('Hapus user ini?')) return;
             appUsers = appUsers.filter(u => u.id !== id);
             if (appUsers.length === 0) {
-                appUsers.push({ id: 'default', name: 'Petugas Demo', username: 'petugas', password: 'pbjt123', role: 'Petugas' });
+                appUsers.push({ id: 'admin-default', name: 'Admin Utama', username: 'admin', password: 'admin123', role: 'Admin' });
+                appUsers.push({ id: 'petugas-default', name: 'Petugas Lapangan', username: 'petugas', password: 'pbjt123', role: 'Petugas' });
             }
             localStorage.setItem('pbjt_app_users', JSON.stringify(appUsers));
             renderUserTable();
