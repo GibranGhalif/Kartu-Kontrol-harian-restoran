@@ -60,6 +60,10 @@
                     </div>
                 </div>
                 <div class="flex gap-2">
+                    <button onclick="checkSyncStatus()" id="sync-status-btn" class="bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition">
+                        <i class="fas fa-cloud"></i>
+                        <span class="hidden md:inline" id="sync-status">Offline</span>
+                    </button>
                     <button onclick="exportData()" class="bg-green-500 hover:bg-green-600 px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition">
                         <i class="fas fa-download"></i> <span class="hidden md:inline">Export</span>
                     </button>
@@ -718,6 +722,27 @@
                                 <input type="text" id="cloud-key" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Masukkan API key">
                             </div>
                         </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" id="cloud-auto-sync" class="rounded">
+                                    <span class="text-sm font-medium text-gray-700">Auto Sync saat perubahan</span>
+                                </label>
+                            </div>
+                            <div>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" id="cloud-backup" class="rounded">
+                                    <span class="text-sm font-medium text-gray-700">Backup otomatis harian</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Interval Sync (detik)</label>
+                            <input type="number" id="cloud-interval" min="10" value="300" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        
                         <div class="flex items-center justify-between bg-blue-50 rounded-lg p-4">
                             <div>
                                 <p class="font-medium text-gray-800">Sinkronisasi Online</p>
@@ -730,6 +755,7 @@
                                 </div>
                             </label>
                         </div>
+                        
                         <div class="flex flex-wrap gap-3">
                             <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition flex items-center gap-2">
                                 <i class="fas fa-save"></i> Simpan Pengaturan
@@ -740,8 +766,20 @@
                             <button type="button" onclick="pullFromCloud()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition flex items-center gap-2">
                                 <i class="fas fa-cloud-download-alt"></i> Ambil dari Cloud
                             </button>
+                            <button type="button" onclick="testCloudConnection()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2 rounded-lg transition flex items-center gap-2">
+                                <i class="fas fa-wifi"></i> Test Koneksi
+                            </button>
                         </div>
-                        <p class="text-xs text-gray-500">Gunakan endpoint API yang mendukung penyimpanan JSON (GET/POST/PUT). Contoh: Firebase, Supabase, atau server internal.</p>
+                        
+                        <div class="bg-gray-50 rounded-lg p-4 mt-4">
+                            <h4 class="font-medium text-gray-800 mb-2">Cara Setup Database Online:</h4>
+                            <ol class="text-sm text-gray-600 list-decimal pl-4 space-y-1">
+                                <li><strong>Firebase:</strong> Gunakan URL database yang sudah ada</li>
+                                <li><strong>Supabase:</strong> https://[project].supabase.co/rest/v1/[table]</li>
+                                <li><strong>Custom API:</strong> Endpoint harus support GET/POST/PUT</li>
+                                <li><strong>API Key:</strong> Masukkan token auth jika diperlukan</li>
+                            </ol>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -796,7 +834,24 @@
     </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+    
     <script>
+        // Konfigurasi Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDXgSd8X7enSxWnIFF2j73bPfF2D8-mQtw",
+            authDomain: "aplikasi-database-wp.firebaseapp.com",
+            databaseURL: "https://aplikasi-database-wp-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "aplikasi-database-wp",
+            storageBucket: "aplikasi-database-wp.firebasestorage.app",
+            messagingSenderId: "500583664848",
+            appId: "1:500583664848:web:c0f15366e7fcd36141e2d5",
+            measurementId: "G-L8SQ2L78EP"
+        };
+
+        // Variabel global
+        let firebaseApp, firebaseDatabase;
         let dailyRecords = JSON.parse(localStorage.getItem('pbjt_daily_records')) || [];
         let collectorProfile = JSON.parse(localStorage.getItem('pbjt_collector_profile')) || {
             instansi: 'UPT Pajak Daerah',
@@ -812,7 +867,11 @@
         let cloudSettings = JSON.parse(localStorage.getItem('pbjt_cloud_settings')) || {
             endpoint: 'https://aplikasi-database-wp-default-rtdb.asia-southeast1.firebasedatabase.app',
             apiKey: 'AIzaSyDXgSd8X7enSxWnIFF2j73bPfF2D8-mQtw',
-            enabled: false
+            enabled: false,
+            autoSync: false,
+            backup: false,
+            syncInterval: 300,
+            type: 'firebase'
         };
         let appUsers = JSON.parse(localStorage.getItem('pbjt_app_users')) || [
             { id: 'admin-default', name: 'Admin Utama', username: 'admin', password: 'admin123', role: 'Admin' },
@@ -824,7 +883,47 @@
         let deleteUserId = null;
         let deleteWpId = null;
         let currentUser = JSON.parse(localStorage.getItem('pbjt_current_user')) || null;
+        let cameraStream = null;
+        let syncInterval;
 
+        // Fungsi inisialisasi Firebase
+        function initFirebase() {
+            try {
+                if (!firebase.apps.length) {
+                    firebaseApp = firebase.initializeApp(firebaseConfig);
+                    firebaseDatabase = firebase.database();
+                    console.log("Firebase initialized successfully");
+                    return true;
+                } else {
+                    firebaseApp = firebase.app();
+                    firebaseDatabase = firebase.database();
+                    return true;
+                }
+            } catch (error) {
+                console.error("Firebase initialization error:", error);
+                return false;
+            }
+        }
+
+        // Fungsi menentukan tipe cloud
+        function determineCloudType(endpoint) {
+            if (endpoint.includes('firebasedatabase')) return 'firebase';
+            if (endpoint.includes('supabase')) return 'supabase';
+            if (endpoint.includes('rest.db')) return 'restdb';
+            return 'custom';
+        }
+
+        // Fungsi mendapatkan device ID
+        function getDeviceId() {
+            let deviceId = localStorage.getItem('pbjt_device_id');
+            if (!deviceId) {
+                deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('pbjt_device_id', deviceId);
+            }
+            return deviceId;
+        }
+
+        // Event listener untuk DOM
         document.addEventListener('DOMContentLoaded', function() {
             initAuth();
             document.getElementById('login-form').addEventListener('submit', handleLogin);
@@ -864,6 +963,7 @@
             document.getElementById('wp-form').addEventListener('submit', saveWajibPajak);
         });
 
+        // Fungsi Authentication
         function initAuth() {
             toggleAuthUI(isAuthenticated());
         }
@@ -940,6 +1040,7 @@
             toggleAuthUI(false);
         }
 
+        // Fungsi Tabs
         function showTab(tabName) {
             if (tabName === 'pengaturan' && !isAdmin()) {
                 showToast('Menu pengaturan hanya untuk admin');
@@ -961,6 +1062,7 @@
             }
         }
 
+        // Fungsi Load Settings
         function loadCollectorProfile() {
             document.getElementById('instansi').value = collectorProfile.instansi;
             document.getElementById('nama-petugas').value = collectorProfile.petugas;
@@ -1037,6 +1139,20 @@
             document.getElementById('cloud-endpoint').value = cloudSettings.endpoint || '';
             document.getElementById('cloud-key').value = cloudSettings.apiKey || '';
             document.getElementById('cloud-enabled').checked = !!cloudSettings.enabled;
+            document.getElementById('cloud-auto-sync').checked = !!cloudSettings.autoSync;
+            document.getElementById('cloud-backup').checked = !!cloudSettings.backup;
+            document.getElementById('cloud-interval').value = cloudSettings.syncInterval || 300;
+            
+            // Update status sync button
+            updateSyncStatus();
+            
+            // Inisialisasi Firebase jika settings sudah ada
+            if (cloudSettings.enabled && cloudSettings.endpoint.includes('firebasedatabase')) {
+                initFirebase();
+            }
+            
+            // Start auto sync jika enabled
+            startAutoSync();
         }
 
         function saveCloudSettings(e) {
@@ -1044,78 +1160,304 @@
             cloudSettings = {
                 endpoint: document.getElementById('cloud-endpoint').value.trim(),
                 apiKey: document.getElementById('cloud-key').value.trim(),
-                enabled: document.getElementById('cloud-enabled').checked
+                enabled: document.getElementById('cloud-enabled').checked,
+                autoSync: document.getElementById('cloud-auto-sync').checked,
+                backup: document.getElementById('cloud-backup').checked,
+                syncInterval: parseInt(document.getElementById('cloud-interval').value) || 300,
+                type: determineCloudType(document.getElementById('cloud-endpoint').value)
             };
             localStorage.setItem('pbjt_cloud_settings', JSON.stringify(cloudSettings));
+            
+            // Inisialisasi Firebase jika menggunakan Firebase
+            if (cloudSettings.enabled && cloudSettings.endpoint.includes('firebasedatabase')) {
+                initFirebase();
+            }
+            
+            // Update status dan start auto sync
+            updateSyncStatus();
+            startAutoSync();
+            
             showToast('Pengaturan cloud disimpan');
         }
 
-        function getCloudHeaders() {
-            const headers = { 'Content-Type': 'application/json' };
-            if (cloudSettings.apiKey) {
-                headers['Authorization'] = `Bearer ${cloudSettings.apiKey}`;
-            }
-            return headers;
-        }
-
+        // Fungsi Cloud Sync
         async function syncToCloud() {
-            if (!cloudSettings.endpoint) {
-                alert('Endpoint API belum diisi');
+            if (!cloudSettings.enabled) {
+                showToast('Sinkronisasi cloud tidak aktif');
                 return;
             }
-            const payload = {
+
+            showToast('Memulai sinkronisasi ke cloud...');
+
+            const allData = {
                 dailyRecords: dailyRecords,
                 collectorProfile: collectorProfile,
                 tarifSettings: tarifSettings,
-                updatedAt: new Date().toISOString()
+                appUsers: appUsers,
+                petugasList: petugasList,
+                wajibPajakList: wajibPajakList,
+                syncTimestamp: new Date().toISOString(),
+                deviceId: getDeviceId()
             };
+
             try {
-                const response = await fetch(cloudSettings.endpoint, {
-                    method: 'PUT',
-                    headers: getCloudHeaders(),
-                    body: JSON.stringify(payload)
-                });
-                if (!response.ok) throw new Error('Gagal sync');
+                if (cloudSettings.type === 'firebase') {
+                    await syncToFirebase(allData);
+                } else {
+                    await syncToCustomAPI(allData);
+                }
                 showToast('Data berhasil disinkron ke cloud');
             } catch (error) {
-                alert('Gagal sinkron ke cloud. Periksa endpoint/API key.');
+                console.error('Sync error:', error);
+                logSyncError(error, 'syncToCloud');
+                showToast('Gagal sinkron ke cloud: ' + error.message);
+            }
+        }
+
+        async function syncToFirebase(data) {
+            if (!firebaseDatabase) {
+                if (!initFirebase()) {
+                    throw new Error('Firebase tidak terinisialisasi');
+                }
+            }
+
+            // Simpan dengan struktur yang terorganisir
+            const updates = {};
+            updates['/dailyRecords'] = data.dailyRecords;
+            updates['/collectorProfile'] = data.collectorProfile;
+            updates['/tarifSettings'] = data.tarifSettings;
+            updates['/appUsers'] = data.appUsers;
+            updates['/petugasList'] = data.petugasList;
+            updates['/wajibPajakList'] = data.wajibPajakList;
+            updates['/lastSync'] = data.syncTimestamp;
+            updates['/devices/' + data.deviceId] = {
+                lastSync: data.syncTimestamp,
+                user: currentUser?.name || 'unknown',
+                device: navigator.userAgent
+            };
+
+            await firebaseDatabase.ref().update(updates);
+        }
+
+        async function syncToCustomAPI(data) {
+            const response = await fetch(cloudSettings.endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': cloudSettings.apiKey ? `Bearer ${cloudSettings.apiKey}` : ''
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
         }
 
         async function pullFromCloud() {
-            if (!cloudSettings.endpoint) {
-                alert('Endpoint API belum diisi');
+            if (!cloudSettings.enabled) {
+                showToast('Sinkronisasi cloud tidak aktif');
                 return;
             }
+
+            showToast('Mengambil data dari cloud...');
+
             try {
-                const response = await fetch(cloudSettings.endpoint, {
-                    method: 'GET',
-                    headers: getCloudHeaders()
-                });
-                if (!response.ok) throw new Error('Gagal mengambil data');
-                const data = await response.json();
-                if (data.dailyRecords) {
-                    dailyRecords = data.dailyRecords;
-                    localStorage.setItem('pbjt_daily_records', JSON.stringify(dailyRecords));
+                let remoteData;
+                
+                if (cloudSettings.type === 'firebase') {
+                    remoteData = await pullFromFirebase();
+                } else {
+                    remoteData = await pullFromGenericAPI();
                 }
-                if (data.collectorProfile) {
-                    collectorProfile = data.collectorProfile;
-                    localStorage.setItem('pbjt_collector_profile', JSON.stringify(collectorProfile));
-                    loadCollectorProfile();
+
+                // Konfirmasi sebelum mengganti data lokal
+                if (confirm(`Akan mengganti data lokal dengan data dari cloud. Terakhir update: ${remoteData.lastSync || remoteData.syncTimestamp || 'unknown'}. Lanjutkan?`)) {
+                    if (remoteData.dailyRecords) {
+                        dailyRecords = remoteData.dailyRecords;
+                        localStorage.setItem('pbjt_daily_records', JSON.stringify(dailyRecords));
+                    }
+                    if (remoteData.collectorProfile) {
+                        collectorProfile = remoteData.collectorProfile;
+                        localStorage.setItem('pbjt_collector_profile', JSON.stringify(collectorProfile));
+                        loadCollectorProfile();
+                    }
+                    if (remoteData.tarifSettings) {
+                        tarifSettings = remoteData.tarifSettings;
+                        localStorage.setItem('pbjt_tarif_settings', JSON.stringify(tarifSettings));
+                        loadTarifSettings();
+                    }
+                    if (remoteData.appUsers) {
+                        appUsers = remoteData.appUsers;
+                        localStorage.setItem('pbjt_app_users', JSON.stringify(appUsers));
+                    }
+                    if (remoteData.petugasList) {
+                        petugasList = remoteData.petugasList;
+                        localStorage.setItem('pbjt_petugas_list', JSON.stringify(petugasList));
+                        loadPetugas();
+                    }
+                    if (remoteData.wajibPajakList) {
+                        wajibPajakList = remoteData.wajibPajakList;
+                        localStorage.setItem('pbjt_wajib_pajak', JSON.stringify(wajibPajakList));
+                        loadWajibPajak();
+                    }
+
+                    updateDashboard();
+                    renderRecords();
+                    showToast('Data cloud berhasil diambil');
                 }
-                if (data.tarifSettings) {
-                    tarifSettings = data.tarifSettings;
-                    localStorage.setItem('pbjt_tarif_settings', JSON.stringify(tarifSettings));
-                    loadTarifSettings();
-                }
-                updateDashboard();
-                renderRecords();
-                showToast('Data cloud berhasil diambil');
             } catch (error) {
-                alert('Gagal mengambil data dari cloud.');
+                console.error('Pull error:', error);
+                logSyncError(error, 'pullFromCloud');
+                showToast('Gagal mengambil data dari cloud');
             }
         }
 
+        async function pullFromFirebase() {
+            if (!firebaseDatabase) {
+                if (!initFirebase()) {
+                    throw new Error('Firebase tidak terinisialisasi');
+                }
+            }
+
+            const snapshot = await firebaseDatabase.ref().once('value');
+            return snapshot.val();
+        }
+
+        async function pullFromGenericAPI() {
+            const response = await fetch(cloudSettings.endpoint, {
+                method: 'GET',
+                headers: {
+                    'Authorization': cloudSettings.apiKey ? `Bearer ${cloudSettings.apiKey}` : ''
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        }
+
+        function startAutoSync() {
+            if (syncInterval) clearInterval(syncInterval);
+            
+            if (cloudSettings.enabled && cloudSettings.autoSync) {
+                const interval = parseInt(cloudSettings.syncInterval || 300) * 1000; // detik ke milidetik
+                syncInterval = setInterval(() => {
+                    if (navigator.onLine) {
+                        syncToCloud();
+                    }
+                }, interval);
+                
+                console.log(`Auto sync started with ${interval/1000}s interval`);
+            }
+        }
+
+        function triggerCloudSync() {
+            if (cloudSettings.enabled && cloudSettings.autoSync !== false) {
+                // Debounce sync untuk menghindari terlalu banyak request
+                clearTimeout(window.syncTimeout);
+                window.syncTimeout = setTimeout(() => {
+                    syncToCloud();
+                }, 5000); // Sync 5 detik setelah perubahan terakhir
+            }
+        }
+
+        function updateSyncStatus() {
+            const statusText = document.getElementById('sync-status');
+            const btn = document.getElementById('sync-status-btn');
+            if (!statusText || !btn) return;
+            
+            if (cloudSettings.enabled) {
+                statusText.textContent = 'Online';
+                btn.classList.remove('bg-blue-500', 'bg-red-500');
+                btn.classList.add('bg-green-500');
+            } else {
+                statusText.textContent = 'Offline';
+                btn.classList.remove('bg-green-500', 'bg-red-500');
+                btn.classList.add('bg-blue-500');
+            }
+        }
+
+        function checkSyncStatus() {
+            if (!cloudSettings.enabled) {
+                showToast('Cloud sync tidak aktif');
+                return;
+            }
+            
+            const btn = document.getElementById('sync-status-btn');
+            const statusText = document.getElementById('sync-status');
+            
+            btn.classList.add('animate-pulse');
+            statusText.textContent = 'Checking...';
+            
+            // Cek koneksi
+            testCloudConnection()
+                .then(() => {
+                    statusText.textContent = 'Online';
+                    btn.classList.remove('bg-blue-500', 'bg-red-500');
+                    btn.classList.add('bg-green-500');
+                    showToast('Koneksi cloud stabil');
+                })
+                .catch(() => {
+                    statusText.textContent = 'Offline';
+                    btn.classList.remove('bg-blue-500', 'bg-green-500');
+                    btn.classList.add('bg-red-500');
+                    showToast('Tidak terhubung ke cloud');
+                })
+                .finally(() => {
+                    setTimeout(() => {
+                        btn.classList.remove('animate-pulse');
+                        updateSyncStatus();
+                    }, 3000);
+                });
+        }
+
+        async function testCloudConnection() {
+            if (cloudSettings.type === 'firebase') {
+                if (!firebaseDatabase) {
+                    if (!initFirebase()) {
+                        throw new Error('Firebase tidak terinisialisasi');
+                    }
+                }
+                // Firebase test dengan membaca timestamp
+                const ref = firebaseDatabase.ref('/lastSync');
+                await ref.once('value');
+                return true;
+            } else {
+                // Test koneksi ke custom API
+                const response = await fetch(cloudSettings.endpoint, { 
+                    method: 'HEAD',
+                    headers: {
+                        'Authorization': cloudSettings.apiKey ? `Bearer ${cloudSettings.apiKey}` : ''
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return true;
+            }
+        }
+
+        function logSyncError(error, operation) {
+            const errorLog = {
+                timestamp: new Date().toISOString(),
+                operation: operation,
+                error: error.message,
+                endpoint: cloudSettings.endpoint,
+                deviceId: getDeviceId(),
+                user: currentUser?.name || 'unknown'
+            };
+            
+            // Simpan di localStorage
+            const logs = JSON.parse(localStorage.getItem('pbjt_sync_logs')) || [];
+            logs.push(errorLog);
+            if (logs.length > 100) logs.shift(); // Batasi 100 log
+            localStorage.setItem('pbjt_sync_logs', JSON.stringify(logs));
+        }
+
+        // Fungsi Kalkulasi PBJT
         function calculatePBJT() {
             const dpp = parseFloat(document.getElementById('dpp').value) || 0;
             const tarif = parseFloat(document.getElementById('tarif').value) || 0;
@@ -1123,8 +1465,7 @@
             document.getElementById('pbjt').value = formatRupiah(pbjt);
         }
 
-        let cameraStream = null;
-
+        // Fungsi Kamera
         async function openCamera() {
             const modal = document.getElementById('camera-modal');
             const video = document.getElementById('video');
@@ -1219,6 +1560,7 @@
             reader.readAsDataURL(file);
         }
 
+        // Fungsi CRUD Records
         function saveRecord(e) {
             e.preventDefault();
             const editId = document.getElementById('edit-id').value;
@@ -1322,6 +1664,7 @@
                 updateDashboard();
                 renderRecords();
                 showToast('Data kunjungan dihapus');
+                triggerCloudSync();
             }
             closeDeleteModal();
         }
@@ -1381,6 +1724,7 @@
             document.getElementById('showing-info').textContent = `Menampilkan ${filtered.length} dari ${dailyRecords.length} kunjungan`;
         }
 
+        // Fungsi Dashboard
         function updateDashboard() {
             const todayStr = new Date().toISOString().split('T')[0];
             const todayRecords = dailyRecords.filter(r => r.tanggal === todayStr);
@@ -1460,6 +1804,7 @@
             `).join('');
         }
 
+        // Fungsi Laporan
         function setDefaultDates() {
             const now = new Date();
             const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -1527,6 +1872,7 @@
             }
         }
 
+        // Fungsi Helper
         function formatRupiah(num) {
             return 'Rp ' + num.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
         }
@@ -1563,11 +1909,23 @@
             }, 3000);
         }
 
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Fungsi Export/Import
         function exportData() {
             const data = {
                 dailyRecords: dailyRecords,
                 collectorProfile: collectorProfile,
                 tarifSettings: tarifSettings,
+                cloudSettings: cloudSettings,
+                appUsers: appUsers,
+                petugasList: petugasList,
+                wajibPajakList: wajibPajakList,
                 exportDate: new Date().toISOString()
             };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1606,6 +1964,26 @@
                         localStorage.setItem('pbjt_tarif_settings', JSON.stringify(tarifSettings));
                         loadTarifSettings();
                     }
+                    if (data.cloudSettings) {
+                        cloudSettings = data.cloudSettings;
+                        localStorage.setItem('pbjt_cloud_settings', JSON.stringify(cloudSettings));
+                        loadCloudSettings();
+                    }
+                    if (data.appUsers) {
+                        appUsers = data.appUsers;
+                        localStorage.setItem('pbjt_app_users', JSON.stringify(appUsers));
+                    }
+                    if (data.petugasList) {
+                        petugasList = data.petugasList;
+                        localStorage.setItem('pbjt_petugas_list', JSON.stringify(petugasList));
+                        loadPetugas();
+                    }
+                    if (data.wajibPajakList) {
+                        wajibPajakList = data.wajibPajakList;
+                        localStorage.setItem('pbjt_wajib_pajak', JSON.stringify(wajibPajakList));
+                        loadWajibPajak();
+                    }
+
                     updateDashboard();
                     renderRecords();
                     showToast('Data berhasil di-restore');
@@ -1645,19 +2023,7 @@
             }
         }
 
-        function triggerCloudSync() {
-            if (cloudSettings.enabled) {
-                syncToCloud();
-            }
-        }
-
-        function scrollToSection(sectionId) {
-            const section = document.getElementById(sectionId);
-            if (section) {
-                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-
+        // Fungsi User Management
         function loadUsers() {
             renderUserTable();
         }
@@ -1680,6 +2046,7 @@
             renderUserTable();
             updateDashboard();
             showToast('User berhasil ditambahkan');
+            triggerCloudSync();
         }
 
         function renderUserTable() {
@@ -1714,8 +2081,10 @@
             renderUserTable();
             updateDashboard();
             showToast('User dihapus');
+            triggerCloudSync();
         }
 
+        // Fungsi Petugas Management
         function loadPetugas() {
             renderPetugasTable();
             populatePetugasList();
@@ -1737,30 +2106,6 @@
             populatePetugasList();
             updateDashboard();
             showToast('Data petugas disimpan');
-        }
-
-        function savePetugasQuick(e) {
-            e.preventDefault();
-            const petugas = {
-                id: Date.now().toString(),
-                nama: document.getElementById('petugas-quick-nama').value.trim(),
-                nip: document.getElementById('petugas-quick-id').value.trim(),
-                wilayah: document.getElementById('petugas-quick-wilayah').value.trim(),
-                kontak: document.getElementById('petugas-quick-kontak').value.trim()
-            };
-
-            if (!petugas.nama) {
-                alert('Nama petugas wajib diisi.');
-                return;
-            }
-
-            petugasList.push(petugas);
-            localStorage.setItem('pbjt_petugas_list', JSON.stringify(petugasList));
-            document.getElementById('petugas-quick-form').reset();
-            renderPetugasTable();
-            populatePetugasList();
-            updateDashboard();
-            showToast('Petugas pemungut berhasil ditambahkan');
             triggerCloudSync();
         }
 
@@ -1810,6 +2155,7 @@
             populatePetugasList();
             updateDashboard();
             showToast('Data petugas dihapus');
+            triggerCloudSync();
         }
 
         function populatePetugasList() {
@@ -1818,6 +2164,7 @@
             list.innerHTML = petugasList.map(p => `<option value="${p.nama}"></option>`).join('');
         }
 
+        // Fungsi Wajib Pajak Management
         function loadWajibPajak() {
             renderWajibPajakTable();
             populateWpSelect();
@@ -1839,6 +2186,7 @@
             renderWajibPajakTable();
             populateWpSelect();
             showToast('Data wajib pajak disimpan');
+            triggerCloudSync();
         }
 
         function renderWajibPajakTable() {
@@ -1886,6 +2234,7 @@
             renderWajibPajakTable();
             populateWpSelect();
             showToast('Data wajib pajak dihapus');
+            triggerCloudSync();
         }
 
         function populateWpSelect() {
@@ -1904,33 +2253,6 @@
             document.getElementById('nama-usaha').value = wp.nama;
             document.getElementById('npwp').value = wp.npwp || '';
             document.getElementById('wilayah').value = wp.wilayah || '';
-        }
-
-        }
-
-         // Import the functions you need from the SDKs you need
-        import { initializeApp } from "firebase/app";
-        import { getAnalytics } from "firebase/analytics";
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
-
-        // Your web app's Firebase configuration
-        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-        const firebaseConfig = {
-          apiKey: "AIzaSyDXgSd8X7enSxWnIFF2j73bPfF2D8-mQtw",
-          authDomain: "aplikasi-database-wp.firebaseapp.com",
-          databaseURL: "https://aplikasi-database-wp-default-rtdb.asia-southeast1.firebasedatabase.app",
-          projectId: "aplikasi-database-wp",
-          storageBucket: "aplikasi-database-wp.firebasestorage.app",
-          messagingSenderId: "500583664848",
-          appId: "1:500583664848:web:c0f15366e7fcd36141e2d5",
-          measurementId: "G-L8SQ2L78EP"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-
         }
     </script>
 </body>
