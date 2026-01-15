@@ -1905,6 +1905,33 @@
             document.getElementById('npwp').value = wp.npwp || '';
             document.getElementById('wilayah').value = wp.wilayah || '';
         }
+
+        }
+
+         // Import the functions you need from the SDKs you need
+        import { initializeApp } from "firebase/app";
+        import { getAnalytics } from "firebase/analytics";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+          apiKey: "AIzaSyDXgSd8X7enSxWnIFF2j73bPfF2D8-mQtw",
+          authDomain: "aplikasi-database-wp.firebaseapp.com",
+          databaseURL: "https://aplikasi-database-wp-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "aplikasi-database-wp",
+          storageBucket: "aplikasi-database-wp.firebasestorage.app",
+          messagingSenderId: "500583664848",
+          appId: "1:500583664848:web:c0f15366e7fcd36141e2d5",
+          measurementId: "G-L8SQ2L78EP"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+
+        }
     </script>
 </body>
 </html>
