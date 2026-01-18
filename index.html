@@ -7,39 +7,19 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --primary: #3b82f6;
-            --primary-dark: #1e3a8a;
-            --accent: #10b981;
-            --surface: #ffffff;
-            --text-main: #0f172a;
-        }
         @media print {
             .no-print { display: none !important; }
             .print-only { display: block !important; }
             body { background: white !important; }
             .card { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
         }
-        body {
-            background-image: radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 55%),
-                              radial-gradient(circle at bottom left, rgba(16,185,129,0.1), transparent 55%);
-        }
         .print-only { display: none; }
-        .gradient-bg { background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%); }
+        .gradient-bg { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); }
         .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.15); }
         .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; background: #eff6ff; }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-        }
-        .soft-shadow { box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08); }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.4); border-radius: 999px; }
-        ::-webkit-scrollbar-track { background: rgba(226, 232, 240, 0.6); }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen select-none">
     <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 no-print">
         <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
             <div class="flex items-center gap-3 mb-6">
@@ -65,6 +45,11 @@
                     <i class="fas fa-sign-in-alt"></i> Masuk
                 </button>
             </form>
+            <div class="mt-6 text-xs text-gray-500 bg-blue-50 rounded-lg p-3">
+                <p class="font-semibold text-gray-700 mb-1">Akun Demo</p>
+                <p>Username: <span class="font-medium">petugas</span></p>
+                <p>Password: <span class="font-medium">pbjt123</span></p>
+            </div>
         </div>
     </div>
 
@@ -80,6 +65,9 @@
                     </div>
                 </div>
                 <div class="flex gap-2">
+                    <button id="btn-install" onclick="installApp()" class="hidden bg-purple-500 hover:bg-purple-600 px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition text-white shadow-lg animate-pulse">
+                        <i class="fas fa-mobile-alt"></i> <span class="hidden md:inline">Install App</span>
+                    </button>
                     <button onclick="exportData()" class="bg-green-500 hover:bg-green-600 px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition">
                         <i class="fas fa-download"></i> <span class="hidden md:inline">Export</span>
                     </button>
@@ -105,9 +93,6 @@
                 </button>
                 <button onclick="showTab('daftar')" id="tab-daftar" class="tab-btn px-4 py-3 font-medium text-sm whitespace-nowrap flex items-center gap-2 text-gray-600 hover:bg-gray-50 transition">
                     <i class="fas fa-list"></i> Daftar Kunjungan
-                </button>
-                <button onclick="showTab('wajib-pajak')" id="tab-wajib-pajak" class="tab-btn px-4 py-3 font-medium text-sm whitespace-nowrap flex items-center gap-2 text-gray-600 hover:bg-gray-50 transition">
-                    <i class="fas fa-building"></i> Data Wajib Pajak
                 </button>
                 <button onclick="showTab('laporan')" id="tab-laporan" class="tab-btn px-4 py-3 font-medium text-sm whitespace-nowrap flex items-center gap-2 text-gray-600 hover:bg-gray-50 transition">
                     <i class="fas fa-chart-bar"></i> Laporan Harian
@@ -220,8 +205,13 @@
                             <input type="date" id="tanggal" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Petugas *</label>
-                            <input type="text" id="petugas" list="petugas-list" required class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Nama petugas">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Petugas Pemungut *</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="petugas" list="petugas-list" required class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Nama petugas">
+                                <button type="button" onclick="openAddPetugasModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition shrink-0" title="Tambah Petugas Baru">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
                             <datalist id="petugas-list"></datalist>
                             <button type="button" onclick="showTab('pengaturan'); scrollToSection('petugas-section')" class="text-xs text-blue-600 mt-2 hover:underline">Kelola data petugas</button>
                         </div>
@@ -242,7 +232,7 @@
                             <select id="wp-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                                 <option value="">Pilih Wajib Pajak (opsional)</option>
                             </select>
-                            <button type="button" onclick="showTab('wajib-pajak')" class="text-xs text-blue-600 mt-2 hover:underline">Kelola data Wajib Pajak</button>
+                            <button type="button" onclick="showTab('wp')" class="text-xs text-blue-600 mt-2 hover:underline">Kelola data Wajib Pajak</button>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Wilayah/Area *</label>
@@ -480,80 +470,55 @@
             </div>
         </div>
 
-        <div id="content-wajib-pajak" class="tab-content hidden">
-            <div class="max-w-5xl mx-auto space-y-6">
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-                        <div>
-                            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                <i class="fas fa-building text-blue-600"></i> Data Wajib Pajak (WP)
-                            </h2>
-                            <p class="text-sm text-gray-500 mt-1">Kelola daftar wajib pajak terdaftar untuk memudahkan input kartu harian.</p>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <button onclick="showTab('input')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                                <i class="fas fa-plus-circle"></i> Input Kartu Harian
-                            </button>
-                            <button onclick="showTab('pengaturan')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                                <i class="fas fa-cog"></i> Pengaturan
-                            </button>
-                        </div>
-                    </div>
-
-                    <form id="wp-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Nama Usaha/WP *</label>
-                            <input type="text" id="wp-nama" required class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Nama usaha">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">NPWPD/NPWP</label>
-                            <input type="text" id="wp-npwp" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Nomor NPWPD/NPWP">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Wilayah/Area</label>
-                            <input type="text" id="wp-wilayah" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Contoh: Kecamatan X">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Alamat</label>
-                            <input type="text" id="wp-alamat" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Alamat usaha">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Kontak</label>
-                            <input type="text" id="wp-kontak" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="No. telepon">
-                        </div>
-                        <div class="lg:col-span-3 flex justify-end">
-                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
-                                <i class="fas fa-plus-circle"></i> Simpan Wajib Pajak
-                            </button>
-                        </div>
-                    </form>
-
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-3 py-2 text-left">Nama Usaha/WP</th>
-                                    <th class="px-3 py-2 text-left">NPWPD/NPWP</th>
-                                    <th class="px-3 py-2 text-left">Wilayah</th>
-                                    <th class="px-3 py-2 text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="wp-table" class="divide-y"></tbody>
-                        </table>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-3">Data WP akan otomatis muncul di form input kartu harian.</p>
+        <div id="content-wp" class="tab-content hidden">
+            <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <i class="fas fa-store-alt text-blue-600"></i> Kelola Data Wajib Pajak
+                </h2>
+                <div class="mb-6 bg-blue-50 border border-blue-100 rounded-lg p-4">
+                    <p class="text-sm text-gray-700">Kelola database Wajib Pajak (WP) di sini. Data yang tersimpan akan otomatis muncul sebagai saran saat mengisi kartu kontrol harian.</p>
                 </div>
-
-                <div class="bg-blue-50 rounded-xl p-6">
-                    <div class="flex items-start gap-3">
-                        <div class="bg-blue-100 text-blue-600 rounded-full w-10 h-10 flex items-center justify-center">
-                            <i class="fas fa-info-circle"></i>
-                        </div>
-                        <div>
-                            <p class="font-medium text-gray-800">Tips Pengelolaan WP</p>
-                            <p class="text-sm text-gray-600">Gunakan data WP agar petugas hanya memilih daftar yang tersedia saat input kartu harian. Data NPWPD/NPWP dan wilayah otomatis terisi.</p>
-                        </div>
+                <form id="wp-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nama Usaha/WP *</label>
+                        <input type="text" id="wp-nama" required class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Nama usaha">
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">NPWPD/NPWP</label>
+                        <input type="text" id="wp-npwp" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Nomor NPWPD/NPWP">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Wilayah/Area</label>
+                        <input type="text" id="wp-wilayah" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Contoh: Kecamatan X">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Alamat</label>
+                        <input type="text" id="wp-alamat" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Alamat usaha">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Kontak</label>
+                        <input type="text" id="wp-kontak" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="No. telepon">
+                    </div>
+                    <div class="lg:col-span-3 flex justify-end">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
+                            <i class="fas fa-plus-circle"></i> Simpan Wajib Pajak
+                        </button>
+                    </div>
+                </form>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Nama Usaha/WP</th>
+                                <th class="px-3 py-2 text-left">NPWPD/NPWP</th>
+                                <th class="px-3 py-2 text-left">Wilayah</th>
+                                <th class="px-3 py-2 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wp-table" class="divide-y">
+                            <tr><td colspan="4" class="px-3 py-4 text-center text-gray-400">Belum ada data wajib pajak</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -640,7 +605,7 @@
 
                 <div id="petugas-section" class="bg-white rounded-xl shadow-md p-6">
                     <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <i class="fas fa-user-tie text-blue-600"></i> Data Petugas Lapangan
+                        <i class="fas fa-user-tie text-blue-600"></i> Data Petugas Pemungut
                     </h2>
                     <form id="petugas-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <div>
@@ -681,6 +646,8 @@
                     </div>
                     <p class="text-xs text-gray-500 mt-3">Data petugas akan muncul sebagai saran pada input kartu harian.</p>
                 </div>
+
+
 
                 <div class="bg-white rounded-xl shadow-md p-6">
                     <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
@@ -725,33 +692,23 @@
 
                 <div class="bg-white rounded-xl shadow-md p-6">
                     <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <i class="fas fa-cloud text-blue-600"></i> Penyimpanan Database Online (Supabase)
+                        <i class="fas fa-cloud text-blue-600"></i> Penyimpanan Database Online
                     </h2>
                     <form id="cloud-form" class="space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Supabase Project URL</label>
-                                <input type="url" id="cloud-endpoint" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="https://xxxxx.supabase.co">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Endpoint API</label>
+                                <input type="url" id="cloud-endpoint" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="https://api.example.com/pbjt">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Supabase API Key</label>
-                                <input type="text" id="cloud-key" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Anon / Service Role Key">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Nama Tabel</label>
-                                <input type="text" id="cloud-table" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="pbjt_storage">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Kunci Data (ID)</label>
-                                <input type="text" id="cloud-record" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="main">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">API Key / Token</label>
+                                <input type="text" id="cloud-key" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Masukkan API key">
                             </div>
                         </div>
                         <div class="flex items-center justify-between bg-blue-50 rounded-lg p-4">
                             <div>
                                 <p class="font-medium text-gray-800">Sinkronisasi Online</p>
-                                <p class="text-sm text-gray-600">Simpan data ke Supabase setiap perubahan</p>
+                                <p class="text-sm text-gray-600">Simpan data ke server setiap perubahan</p>
                             </div>
                             <label class="inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="cloud-enabled" class="sr-only peer">
@@ -771,63 +728,7 @@
                                 <i class="fas fa-cloud-download-alt"></i> Ambil dari Cloud
                             </button>
                         </div>
-                        <div class="bg-gray-50 rounded-lg p-4 text-xs text-gray-600 leading-relaxed">
-                            <p class="font-medium text-gray-700 mb-1">Struktur tabel Supabase yang disarankan:</p>
-                            <ul class="list-disc list-inside space-y-1">
-                                <li><span class="font-semibold">id</span> (text, primary key)</li>
-                                <li><span class="font-semibold">payload</span> (jsonb)</li>
-                                <li><span class="font-semibold">updated_at</span> (timestamp)</li>
-                            </ul>
-                            <p class="mt-2">Pastikan kebijakan RLS mengizinkan operasi select/insert/update atau gunakan service role key.</p>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <i class="fas fa-fire text-orange-500"></i> Konfigurasi Firebase (Referensi)
-                    </h2>
-                    <form id="firebase-form" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Auth Domain</label>
-                                <input type="text" id="firebase-authDomain" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="aplikasi.firebaseapp.com">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Database URL</label>
-                                <input type="url" id="firebase-databaseURL" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="https://xxxxx.firebaseio.com">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Project ID</label>
-                                <input type="text" id="firebase-projectId" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="project-id">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Storage Bucket</label>
-                                <input type="text" id="firebase-storageBucket" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="bucket.appspot.com">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Messaging Sender ID</label>
-                                <input type="text" id="firebase-messagingSenderId" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="sender-id">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">App ID</label>
-                                <input type="text" id="firebase-appId" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="1:xxx:web:xxx">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Measurement ID</label>
-                            <input type="text" id="firebase-measurementId" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="G-XXXX">
-                        </div>
-                        <div class="flex flex-wrap gap-3">
-                            <button type="submit" class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg transition flex items-center gap-2">
-                                <i class="fas fa-save"></i> Simpan Konfigurasi
-                            </button>
-                            <p class="text-xs text-gray-500 flex items-center">Disimpan sebagai referensi, belum dipakai untuk sinkronisasi.</p>
-                        </div>
+                        <p class="text-xs text-gray-500">Gunakan endpoint API yang mendukung penyimpanan JSON (GET/POST/PUT). Contoh: Firebase, Supabase, atau server internal.</p>
                     </form>
                 </div>
             </div>
@@ -842,6 +743,38 @@
                 <button onclick="closeDeleteModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition">Batal</button>
                 <button onclick="confirmDelete()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition">Hapus</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Quick Add Petugas -->
+    <div id="add-petugas-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-user-plus text-blue-600"></i> Tambah Petugas Pemungut
+                </h3>
+                <button onclick="closeAddPetugasModal()" class="text-gray-500 hover:text-gray-700 transition"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="quick-petugas-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Petugas *</label>
+                    <input type="text" id="quick-petugas-nama" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Nama lengkap">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">NIP / ID</label>
+                    <input type="text" id="quick-petugas-id" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Nomor identitas">
+                </div>
+                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Wilayah Tugas</label>
+                    <input type="text" id="quick-petugas-wilayah" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Wilayah tugas">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeAddPetugasModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm transition">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition flex items-center gap-2">
+                        <i class="fas fa-save"></i> Simpan
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -898,23 +831,10 @@
         let cloudSettings = JSON.parse(localStorage.getItem('pbjt_cloud_settings')) || {
             endpoint: '',
             apiKey: '',
-            table: 'pbjt_storage',
-            recordId: 'main',
             enabled: false
         };
-        let firebaseConfig = JSON.parse(localStorage.getItem('pbjt_firebase_config')) || {
-            authDomain: 'kartukontrolharian-66505.firebaseapp.com',
-            databaseURL: 'https://kartukontrolharian-66505-default-rtdb.asia-southeast1.firebasedatabase.app/',
-            projectId: 'kartukontrolharian-66505',
-            storageBucket: 'kartukontrolharian-66505.firebasestorage.app',
-            messagingSenderId: '900396339314',
-            appId: '1:900396339314:web:372de1192a6a821acab2eb',
-            measurementId: 'G-47WRKQBYX1',
-            apiKey: 'AIzaSyDFInHeGl0Pb2bBTBdzfFd3iMHrUI1Zntg'
-        };
         let appUsers = JSON.parse(localStorage.getItem('pbjt_app_users')) || [
-            { id: 'admin-default', name: 'Admin Utama', username: 'admin', password: 'admin123', role: 'Admin' },
-            { id: 'petugas-default', name: 'Petugas Lapangan', username: 'petugas', password: 'pbjt123', role: 'Petugas' }
+            { id: 'default', name: 'Petugas Demo', username: 'petugas', password: 'pbjt123', role: 'Petugas' }
         ];
         let wajibPajakList = JSON.parse(localStorage.getItem('pbjt_wajib_pajak')) || [];
         let petugasList = JSON.parse(localStorage.getItem('pbjt_petugas_list')) || [];
@@ -922,6 +842,7 @@
         let deleteUserId = null;
         let deleteWpId = null;
         let currentUser = JSON.parse(localStorage.getItem('pbjt_current_user')) || null;
+        const loginUser = { username: 'petugas', password: 'pbjt123' };
 
         document.addEventListener('DOMContentLoaded', function() {
             initAuth();
@@ -957,10 +878,10 @@
             document.getElementById('daily-form').addEventListener('submit', saveRecord);
             document.getElementById('collector-form').addEventListener('submit', saveCollectorProfile);
             document.getElementById('cloud-form').addEventListener('submit', saveCloudSettings);
-            document.getElementById('firebase-form').addEventListener('submit', saveFirebaseConfig);
             document.getElementById('user-form').addEventListener('submit', saveUser);
             document.getElementById('petugas-form').addEventListener('submit', savePetugas);
             document.getElementById('wp-form').addEventListener('submit', saveWajibPajak);
+            document.getElementById('quick-petugas-form').addEventListener('submit', quickSavePetugas);
         });
 
         function initAuth() {
@@ -971,33 +892,15 @@
             return localStorage.getItem('pbjt_logged_in') === 'true';
         }
 
-        function isAdmin() {
-            return currentUser && currentUser.role === 'Admin';
-        }
-
         function toggleAuthUI(loggedIn) {
             const loginScreen = document.getElementById('login-screen');
             const appContent = document.getElementById('app-content');
             if (loggedIn) {
                 loginScreen.classList.add('hidden');
                 appContent.classList.remove('hidden');
-                applyRoleAccess();
             } else {
                 loginScreen.classList.remove('hidden');
                 appContent.classList.add('hidden');
-            }
-        }
-
-        function applyRoleAccess() {
-            const tabPengaturan = document.getElementById('tab-pengaturan');
-            if (!tabPengaturan) return;
-            if (isAdmin()) {
-                tabPengaturan.classList.remove('hidden');
-            } else {
-                tabPengaturan.classList.add('hidden');
-                if (document.getElementById('content-pengaturan') && !document.getElementById('content-pengaturan').classList.contains('hidden')) {
-                    showTab('dashboard');
-                }
             }
         }
 
@@ -1040,10 +943,6 @@
         }
 
         function showTab(tabName) {
-            if (tabName === 'pengaturan' && !isAdmin()) {
-                showToast('Menu pengaturan hanya untuk admin');
-                return;
-            }
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => {
                 el.classList.remove('tab-active');
@@ -1135,10 +1034,7 @@
         function loadCloudSettings() {
             document.getElementById('cloud-endpoint').value = cloudSettings.endpoint || '';
             document.getElementById('cloud-key').value = cloudSettings.apiKey || '';
-            document.getElementById('cloud-table').value = cloudSettings.table || 'pbjt_storage';
-            document.getElementById('cloud-record').value = cloudSettings.recordId || 'main';
             document.getElementById('cloud-enabled').checked = !!cloudSettings.enabled;
-            loadFirebaseConfig();
         }
 
         function saveCloudSettings(e) {
@@ -1146,130 +1042,56 @@
             cloudSettings = {
                 endpoint: document.getElementById('cloud-endpoint').value.trim(),
                 apiKey: document.getElementById('cloud-key').value.trim(),
-                table: document.getElementById('cloud-table').value.trim() || 'pbjt_storage',
-                recordId: document.getElementById('cloud-record').value.trim() || 'main',
                 enabled: document.getElementById('cloud-enabled').checked
             };
             localStorage.setItem('pbjt_cloud_settings', JSON.stringify(cloudSettings));
-            showToast('Pengaturan Supabase disimpan');
+            showToast('Pengaturan cloud disimpan');
         }
 
-        function loadFirebaseConfig() {
-            const config = firebaseConfig || {};
-            document.getElementById('firebase-authDomain').value = config.authDomain || '';
-            document.getElementById('firebase-databaseURL').value = config.databaseURL || '';
-            document.getElementById('firebase-projectId').value = config.projectId || '';
-            document.getElementById('firebase-storageBucket').value = config.storageBucket || '';
-            document.getElementById('firebase-messagingSenderId').value = config.messagingSenderId || '';
-            document.getElementById('firebase-appId').value = config.appId || '';
-            document.getElementById('firebase-measurementId').value = config.measurementId || '';
-        }
-
-        function saveFirebaseConfig(e) {
-            e.preventDefault();
-            firebaseConfig = {
-                authDomain: document.getElementById('firebase-authDomain').value.trim(),
-                databaseURL: document.getElementById('firebase-databaseURL').value.trim(),
-                projectId: document.getElementById('firebase-projectId').value.trim(),
-                storageBucket: document.getElementById('firebase-storageBucket').value.trim(),
-                messagingSenderId: document.getElementById('firebase-messagingSenderId').value.trim(),
-                appId: document.getElementById('firebase-appId').value.trim(),
-                measurementId: document.getElementById('firebase-measurementId').value.trim()
-            };
-            localStorage.setItem('pbjt_firebase_config', JSON.stringify(firebaseConfig));
-            showToast('Konfigurasi Firebase disimpan');
-        }
-
-        function getSupabaseBaseUrl() {
-            let endpoint = (cloudSettings.endpoint || '').trim();
-            if (!endpoint) return '';
-            endpoint = endpoint.replace(/\/+$/, '');
-            return `${endpoint}/rest/v1/${encodeURIComponent(cloudSettings.table || 'pbjt_storage')}`;
-        }
-
-        function getSupabaseHeaders() {
-            const key = (cloudSettings.apiKey || '').trim();
-            return {
-                'Content-Type': 'application/json',
-                'apikey': key,
-                'Authorization': `Bearer ${key}`
-            };
-        }
-
-        function buildSupabasePayload() {
-            return {
-                id: cloudSettings.recordId || 'main',
-                payload: {
-                    dailyRecords: dailyRecords,
-                    collectorProfile: collectorProfile,
-                    tarifSettings: tarifSettings,
-                    appUsers: appUsers,
-                    wajibPajakList: wajibPajakList,
-                    petugasList: petugasList
-                },
-                updated_at: new Date().toISOString()
-            };
+        function getCloudHeaders() {
+            const headers = { 'Content-Type': 'application/json' };
+            if (cloudSettings.apiKey) {
+                headers['Authorization'] = `Bearer ${cloudSettings.apiKey}`;
+            }
+            return headers;
         }
 
         async function syncToCloud() {
-            const baseUrl = getSupabaseBaseUrl();
-            const headers = getSupabaseHeaders();
-            if (!baseUrl) {
-                alert('Supabase URL belum diisi');
+            if (!cloudSettings.endpoint) {
+                alert('Endpoint API belum diisi');
                 return;
             }
-            if (!headers.apikey) {
-                alert('Supabase API key belum diisi');
-                return;
-            }
-            const recordId = cloudSettings.recordId || 'main';
-            const payload = buildSupabasePayload();
+            const payload = {
+                dailyRecords: dailyRecords,
+                collectorProfile: collectorProfile,
+                tarifSettings: tarifSettings,
+                updatedAt: new Date().toISOString()
+            };
             try {
-                const response = await fetch(`${baseUrl}?id=eq.${encodeURIComponent(recordId)}`, {
-                    method: 'PATCH',
-                    headers: { ...headers, 'Prefer': 'return=representation' },
-                    body: JSON.stringify({ payload: payload.payload, updated_at: payload.updated_at })
+                const response = await fetch(cloudSettings.endpoint, {
+                    method: 'PUT',
+                    headers: getCloudHeaders(),
+                    body: JSON.stringify(payload)
                 });
-                if (response.status === 406 || response.status === 404) {
-                    const insertResponse = await fetch(baseUrl, {
-                        method: 'POST',
-                        headers: { ...headers, 'Prefer': 'return=representation' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (!insertResponse.ok) throw new Error('Gagal insert data');
-                } else if (!response.ok) {
-                    throw new Error('Gagal update data');
-                }
-                showToast('Data berhasil disinkron ke Supabase');
+                if (!response.ok) throw new Error('Gagal sync');
+                showToast('Data berhasil disinkron ke cloud');
             } catch (error) {
-                alert('Gagal sinkron ke Supabase. Periksa URL, API key, dan izin RLS.');
+                alert('Gagal sinkron ke cloud. Periksa endpoint/API key.');
             }
         }
 
         async function pullFromCloud() {
-            const baseUrl = getSupabaseBaseUrl();
-            const headers = getSupabaseHeaders();
-            if (!baseUrl) {
-                alert('Supabase URL belum diisi');
+            if (!cloudSettings.endpoint) {
+                alert('Endpoint API belum diisi');
                 return;
             }
-            if (!headers.apikey) {
-                alert('Supabase API key belum diisi');
-                return;
-            }
-            const recordId = cloudSettings.recordId || 'main';
             try {
-                const response = await fetch(`${baseUrl}?id=eq.${encodeURIComponent(recordId)}&select=payload`, {
+                const response = await fetch(cloudSettings.endpoint, {
                     method: 'GET',
-                    headers
+                    headers: getCloudHeaders()
                 });
                 if (!response.ok) throw new Error('Gagal mengambil data');
-                const rows = await response.json();
-                if (!rows || rows.length === 0 || !rows[0].payload) {
-                    alert('Data Supabase belum tersedia untuk ID ini');
-                    return;
-                }
-                const data = rows[0].payload;
+                const data = await response.json();
                 if (data.dailyRecords) {
                     dailyRecords = data.dailyRecords;
                     localStorage.setItem('pbjt_daily_records', JSON.stringify(dailyRecords));
@@ -1284,26 +1106,11 @@
                     localStorage.setItem('pbjt_tarif_settings', JSON.stringify(tarifSettings));
                     loadTarifSettings();
                 }
-                if (data.appUsers) {
-                    appUsers = data.appUsers;
-                    localStorage.setItem('pbjt_app_users', JSON.stringify(appUsers));
-                    loadUsers();
-                }
-                if (data.wajibPajakList) {
-                    wajibPajakList = data.wajibPajakList;
-                    localStorage.setItem('pbjt_wajib_pajak', JSON.stringify(wajibPajakList));
-                    loadWajibPajak();
-                }
-                if (data.petugasList) {
-                    petugasList = data.petugasList;
-                    localStorage.setItem('pbjt_petugas_list', JSON.stringify(petugasList));
-                    loadPetugas();
-                }
                 updateDashboard();
                 renderRecords();
-                showToast('Data Supabase berhasil diambil');
+                showToast('Data cloud berhasil diambil');
             } catch (error) {
-                alert('Gagal mengambil data dari Supabase.');
+                alert('Gagal mengambil data dari cloud.');
             }
         }
 
@@ -1583,8 +1390,6 @@
             document.getElementById('summary-paid').textContent = formatRupiah(totalPaid);
             document.getElementById('summary-visits').textContent = todayRecords.length;
             document.getElementById('summary-outstanding').textContent = formatRupiah(outstanding);
-            const petugasCount = petugasList && petugasList.length ? petugasList.length : (appUsers ? appUsers.length : 0);
-            document.getElementById('summary-petugas').textContent = petugasCount;
 
             renderChart();
             renderRecent();
@@ -1898,8 +1703,7 @@
             if (!confirm('Hapus user ini?')) return;
             appUsers = appUsers.filter(u => u.id !== id);
             if (appUsers.length === 0) {
-                appUsers.push({ id: 'admin-default', name: 'Admin Utama', username: 'admin', password: 'admin123', role: 'Admin' });
-                appUsers.push({ id: 'petugas-default', name: 'Petugas Lapangan', username: 'petugas', password: 'pbjt123', role: 'Petugas' });
+                appUsers.push({ id: 'default', name: 'Petugas Demo', username: 'petugas', password: 'pbjt123', role: 'Petugas' });
             }
             localStorage.setItem('pbjt_app_users', JSON.stringify(appUsers));
             renderUserTable();
@@ -1928,31 +1732,6 @@
             populatePetugasList();
             updateDashboard();
             showToast('Data petugas disimpan');
-        }
-
-        function savePetugasQuick(e) {
-            e.preventDefault();
-            const petugas = {
-                id: Date.now().toString(),
-                nama: document.getElementById('petugas-quick-nama').value.trim(),
-                nip: document.getElementById('petugas-quick-id').value.trim(),
-                wilayah: document.getElementById('petugas-quick-wilayah').value.trim(),
-                kontak: document.getElementById('petugas-quick-kontak').value.trim()
-            };
-
-            if (!petugas.nama) {
-                alert('Nama petugas wajib diisi.');
-                return;
-            }
-
-            petugasList.push(petugas);
-            localStorage.setItem('pbjt_petugas_list', JSON.stringify(petugasList));
-            document.getElementById('petugas-quick-form').reset();
-            renderPetugasTable();
-            populatePetugasList();
-            updateDashboard();
-            showToast('Petugas pemungut berhasil ditambahkan');
-            triggerCloudSync();
         }
 
         function renderPetugasTable() {
@@ -2085,6 +1864,48 @@
             select.innerHTML = '<option value="">Pilih Wajib Pajak (opsional)</option>' + wajibPajakList.map(wp => `
                 <option value="${wp.id}">${wp.nama} ${wp.npwp ? `- ${wp.npwp}` : ''}</option>
             `).join('');
+        }
+
+        function openAddPetugasModal() {
+            document.getElementById('add-petugas-modal').classList.remove('hidden');
+            document.getElementById('add-petugas-modal').classList.add('flex');
+            document.getElementById('quick-petugas-nama').focus();
+        }
+
+        function closeAddPetugasModal() {
+            document.getElementById('add-petugas-modal').classList.add('hidden');
+            document.getElementById('add-petugas-modal').classList.remove('flex');
+            document.getElementById('quick-petugas-form').reset();
+        }
+
+        function quickSavePetugas(e) {
+            e.preventDefault();
+            const nama = document.getElementById('quick-petugas-nama').value.trim();
+            const id = document.getElementById('quick-petugas-id').value.trim();
+            const wilayah = document.getElementById('quick-petugas-wilayah').value.trim();
+
+            if (!nama) return;
+
+            const petugas = {
+                id: Date.now().toString(),
+                nama: nama,
+                nip: id,
+                wilayah: wilayah,
+                kontak: ''
+            };
+
+            petugasList.push(petugas);
+            localStorage.setItem('pbjt_petugas_list', JSON.stringify(petugasList));
+            
+            renderPetugasTable();
+            populatePetugasList();
+            updateDashboard();
+            
+            // Set value to input
+            document.getElementById('petugas').value = nama;
+            
+            closeAddPetugasModal();
+            showToast('Petugas baru berhasil ditambahkan');
         }
 
         function handleWpSelect(e) {
